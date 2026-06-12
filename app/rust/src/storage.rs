@@ -333,6 +333,38 @@ impl Storage {
         Ok(journey_bitmap)
     }
 
+    /// Return the cached full-coverage bitmap for the given layer kind.
+    ///
+    /// Locks `dbs` once and runs the cache fetch/compute under a single
+    /// `MainDb` transaction. Do NOT route this through
+    /// `with_db_txn` — `std::sync::Mutex` is not reentrant, so taking the
+    /// `dbs` lock again would deadlock.
+    #[auto_context]
+    pub fn get_achievement_full_bitmap(&self, layer_kind: &LayerKind) -> Result<JourneyBitmap> {
+        let mut dbs = self.dbs.lock().unwrap();
+        let (ref mut main_db, ref cache_db) = *dbs;
+        main_db.with_txn(|txn| cache_db.get_or_compute(txn, layer_kind, None, None))
+    }
+
+    /// Like `get_achievement_full_bitmap` for several layers AS ONE
+    /// SNAPSHOT: one `dbs` lock, one transaction, so a journey merge
+    /// cannot land between the fetches and make the layers mutually
+    /// inconsistent (e.g. an `All` area smaller than `Default`'s).
+    #[auto_context]
+    pub fn get_achievement_full_bitmaps(
+        &self,
+        layer_kinds: &[LayerKind],
+    ) -> Result<Vec<JourneyBitmap>> {
+        let mut dbs = self.dbs.lock().unwrap();
+        let (ref mut main_db, ref cache_db) = *dbs;
+        main_db.with_txn(|txn| {
+            layer_kinds
+                .iter()
+                .map(|lk| cache_db.get_or_compute(txn, lk, None, None))
+                .collect()
+        })
+    }
+
     #[auto_context]
     pub fn get_range_bitmap(
         &self,
@@ -379,5 +411,48 @@ impl Storage {
         drop(raw_data_recorder);
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod achievement_storage_tests {
+    use super::*;
+    use tempdir::TempDir;
+
+    fn fresh_storage() -> (Storage, TempDir, TempDir) {
+        let support = TempDir::new("storage-ach-support").unwrap();
+        let cache = TempDir::new("storage-ach-cache").unwrap();
+        let storage = Storage::init(
+            "/tmp".to_string(),
+            "/tmp".to_string(),
+            support.path().to_str().unwrap().to_string(),
+            cache.path().to_str().unwrap().to_string(),
+        );
+        (storage, support, cache)
+    }
+
+    #[test]
+    fn get_achievement_full_bitmap_empty_for_empty_main_db() {
+        let (storage, _s, _c) = fresh_storage();
+        let bitmap = storage
+            .get_achievement_full_bitmap(&LayerKind::All)
+            .unwrap();
+        // No journeys means an empty bitmap.
+        assert!(bitmap.all_tile_keys().count() == 0);
+    }
+
+    #[test]
+    fn get_achievement_full_bitmaps_one_snapshot_for_all_layers() {
+        let (storage, _s, _c) = fresh_storage();
+        let layer_kinds = [
+            LayerKind::JourneyKind(JourneyKind::DefaultKind),
+            LayerKind::JourneyKind(JourneyKind::Flight),
+            LayerKind::All,
+        ];
+        let bitmaps = storage.get_achievement_full_bitmaps(&layer_kinds).unwrap();
+        assert_eq!(bitmaps.len(), 3);
+        for bitmap in &bitmaps {
+            assert!(bitmap.all_tile_keys().count() == 0);
+        }
     }
 }
