@@ -37,6 +37,7 @@ use log::{error, info, warn};
 pub(super) struct MainState {
     pub storage: Storage,
     pub gps_preprocessor: Mutex<GpsPreprocessor>,
+    pub achievement: Arc<crate::achievement::manager::AchievementManager>,
     main_map_state: Arc<Mutex<MainMapState>>,
 }
 
@@ -124,6 +125,7 @@ pub fn init(temp_dir: String, doc_dir: String, support_dir: String, system_cache
         MainState {
             storage,
             gps_preprocessor: Mutex::new(GpsPreprocessor::new()),
+            achievement: Arc::new(crate::achievement::manager::AchievementManager::default()),
             main_map_state,
         }
     });

@@ -230,6 +230,18 @@ impl Storage {
         raw_data_recorder.is_some()
     }
 
+    /// The persisted worldview choice (`None` when never set). A read error
+    /// propagates — never coerced to `None` (see `startup_worldview_id`).
+    pub fn get_active_worldview(&self) -> Result<Option<String>> {
+        let main_db = &mut self.dbs.lock().unwrap().0;
+        main_db.get_setting::<String>(crate::main_db::Setting::ActiveWorldview)
+    }
+
+    pub fn set_active_worldview(&self, worldview_id: &str) -> Result<()> {
+        let main_db = &mut self.dbs.lock().unwrap().0;
+        main_db.set_setting(crate::main_db::Setting::ActiveWorldview, worldview_id)
+    }
+
     #[auto_context]
     pub fn delete_raw_data_file(&self, filename: String) -> Result<()> {
         let filename = if Path::new(&filename).extension().is_some() {
