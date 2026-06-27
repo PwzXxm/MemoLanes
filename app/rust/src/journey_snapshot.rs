@@ -9,6 +9,7 @@
 use crate::{
     cache_db::{CacheDb, LayerKind},
     journey_bitmap::JourneyBitmap,
+    journey_header::JourneyKind,
     journey_vector::JourneyVector,
     main_db,
 };
@@ -41,5 +42,21 @@ impl<'a, 'txn> JourneySnapshot<'a, 'txn> {
     /// (e.g. the live map renderer) sees one consistent state.
     pub fn ongoing_journey(&self) -> Result<Option<JourneyVector>> {
         self.txn.get_ongoing_journey(None)
+    }
+
+    /// Every finalized journey's `(date, kind, footprint)` in ascending
+    /// `journey_date` order, for the region / per-journey views to replay.
+    /// `query_journeys` is newest-first, hence the reverse.
+    pub fn journeys_chronological(&self) -> Result<Vec<(NaiveDate, JourneyKind, JourneyBitmap)>> {
+        let mut headers = self.txn.query_journeys(None, None)?;
+        headers.reverse();
+        let mut out = Vec::with_capacity(headers.len());
+        for header in headers {
+            let data = self.txn.get_journey_data(&header.id)?;
+            let mut bitmap = JourneyBitmap::new();
+            data.merge_into(&mut bitmap);
+            out.push((header.journey_date, header.journey_kind, bitmap));
+        }
+        Ok(out)
     }
 }
