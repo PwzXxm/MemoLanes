@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use anyhow::Result;
 
 use flutter_rust_bridge::frb;
-use geo_data_format::{all_worldviews, WorldviewVariant};
+use geo_data_format::WorldviewVariant;
 
 pub use crate::achievement::layer::AchievementLayer;
 use crate::achievement::read_model::region;
 pub use crate::achievement::read_model::region::{
     LevelSummary, RegionDetail, RegionEntity, RegionKind, RegionLevelView,
 };
-pub use geo_data_format::{GeoEntityId, Worldview};
+pub use geo_data_format::GeoEntityId;
 
 // `GeoEntityId` (external `geo_data_format`) keys `RegionLevelView.entries` /
 // `RegionDetail.children`. Mirror its field so Dart gets a value class with
@@ -18,44 +18,38 @@ pub use geo_data_format::{GeoEntityId, Worldview};
 #[frb(mirror(GeoEntityId))]
 pub struct _GeoEntityId(pub u32);
 
-// `Worldview` lives in `geo_data_format` (external crate), so FRB can't see its
-// fields to translate it by value. Mirror the field list here so the Dart side
-// gets a plain class with `id`/`name_key`/`description_key`, not an opaque box.
-#[frb(mirror(Worldview))]
-pub struct _Worldview {
-    pub id: String,
-    pub name_key: String,
-    pub description_key: String,
+#[frb(mirror(WorldviewVariant))]
+pub enum _WorldviewVariant {
+    Iso,
+    Chn,
+    Usa,
 }
 
-// Geo (worldview asset): the prerequisite for every region read.
-
-/// What `get_geo` reports: the user's selected worldview and the offered list.
-pub struct GeoStatus {
-    /// The user's chosen worldview id (a [`Worldview::id`]), persisted; defaults
-    /// to the first [`WorldviewVariant`] ("iso") until the user picks another.
-    pub selected_worldview: String,
-    /// The full offered worldview list (the compiled set).
-    pub worldviews: Vec<Worldview>,
+// TODO: change these to a method instead of a function.
+#[frb(sync)]
+pub fn worldview_asset_path(worldview: &WorldviewVariant) -> String {
+    format!("assets/geo/geo_data_{}.bin", worldview.spec().id)
 }
 
-/// Install (or switch to) a worldview. `worldview` is a [`Worldview::id`] (e.g.
-/// `"iso"`); the backend reads the corresponding bundled `geo_data_<id>.bin`
-/// from its configured geo dir. A worldview change re-derives the region index.
-/// Errors on an unknown `worldview` id or a missing asset file.
-pub fn set_geo(worldview: String) -> Result<()> {
-    let worldview = WorldviewVariant::from_id(&worldview)?;
-    crate::api::api::get().storage.set_geo(worldview)
+#[frb(sync)]
+pub fn worldview_of_string_opt(str: &str) -> Option<WorldviewVariant> {
+    WorldviewVariant::from_id(str).ok()
 }
 
-/// The user's selected worldview id (persisted, default "iso") and the full
-/// offered worldview list ([`all_worldviews`], the compiled set).
-pub fn get_geo() -> Result<GeoStatus> {
-    let storage = &crate::api::api::get().storage;
-    Ok(GeoStatus {
-        selected_worldview: storage.selected_worldview().spec().id.to_string(),
-        worldviews: all_worldviews(),
-    })
+#[frb(sync)]
+pub fn worldview_to_string(worldview: &WorldviewVariant) -> &'static str {
+    worldview.spec().id
+}
+
+#[frb(sync)]
+pub fn default_worldview() -> WorldviewVariant {
+    WorldviewVariant::ALL[0]
+}
+
+pub fn init_or_change_geo_data(worldview: WorldviewVariant, geo_data: &[u8]) -> Result<()> {
+    crate::api::api::get()
+        .storage
+        .init_or_change_geo_data(worldview, geo_data)
 }
 
 /// Explored area for a single layer.

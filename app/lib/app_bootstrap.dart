@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/cupertino.dart';
@@ -9,7 +10,6 @@ import 'package:memolanes/common/app_lifecycle_service.dart';
 import 'package:memolanes/common/share_handler_util.dart';
 import 'package:memolanes/common/shortcut_handler_util.dart';
 import 'package:memolanes/common/update_notifier.dart';
-import 'package:memolanes/common/geo_service.dart';
 import 'package:memolanes/common/gps_manager.dart';
 import 'package:memolanes/common/log.dart';
 import 'package:memolanes/common/mmkv_util.dart';
@@ -108,6 +108,13 @@ class AppBootstrap {
     }
   }
 
+  static Future<void> _initOrChangeGeoData(
+      achievement.WorldviewVariant worldview) async {
+    final data = await rootBundle.load('assets/geo/geo_data_iso.bin');
+    await achievement.initOrChangeGeoData(
+        worldview: worldview, geoData: data.buffer.asUint8List());
+  }
+
   static Future<void> initAppRuntime() async {
     // This is required since we are doing things before calling `runApp`.
     WidgetsFlutterBinding.ensureInitialized();
@@ -129,19 +136,16 @@ class AppBootstrap {
     ]);
 
     await api.init(
-        tempDir: (await tempDirFuture).path,
-        docDir: (await docDirFuture).path,
-        supportDir: (await supportDirFuture).path,
-        systemCacheDir: (await cacheDirFuture).path,
-        // Worldview geo assets are materialized lazily into this dir by
-        // GeoService.setGeo; the backend reads geo_data_<id>.bin from here.
-        // Sourced from GeoService so the read/write dir is defined once.
-        geoDir: await GeoService.geoDir());
+      tempDir: (await tempDirFuture).path,
+      docDir: (await docDirFuture).path,
+      supportDir: (await supportDirFuture).path,
+      systemCacheDir: (await cacheDirFuture).path,
+    );
 
-    // Activate the persisted worldview (default "iso") so region features work
-    // out of the box; the user only changes it if they want a different one.
-    final geo = await achievement.getGeo();
-    await GeoService.setGeo(geo.selectedWorldview);
+    // TODO: right now we make sure the geo data is fully loaded during app
+    // initialization, which can be a bit expensive. We should consider delay
+    // this a bit.
+    await _initOrChangeGeoData(achievement.defaultWorldview());
   }
 
   static void startAppServices({

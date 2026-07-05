@@ -9,8 +9,6 @@
 //! the worldview list into `geo_data.bin`) and the runtime depend on this crate,
 //! so the spec lives here rather than in the tool.
 
-use crate::Worldview;
-
 /// Commit pinned on `nvkelso/natural-earth-vector` (master @ 2026-04-26).
 /// Bumping this shifts entity IDs, areas, and border tiles for every worldview.
 pub const NATURAL_EARTH_COMMIT: &str = "ca96624a56bd078437bca8184e78163e5039ad19";
@@ -28,15 +26,11 @@ pub enum WorldviewVariant {
     Usa,
 }
 
-/// All per-worldview facts. `id`/`name_key`/`description_key` feed the embedded
-/// worldview list (runtime-facing); `source_*` drive the offline download.
+/// All per-worldview facts. `id` feed the embedded worldview list (runtime-facing);
+/// `source_*` drive the offline download.
 pub struct WorldviewVariantSpec {
     /// Externally-meaningful worldview id (also the `geo_data_<id>.bin` suffix).
     pub id: &'static str,
-    /// Flutter l10n key for the display name.
-    pub name_key: &'static str,
-    /// Flutter l10n key for the description.
-    pub description_key: &'static str,
     /// Natural Earth GeoJSON filename under `NATURAL_EARTH_BASE`.
     pub source_filename: &'static str,
     /// SHA-256 of the pinned source's raw bytes (recorded at pin time).
@@ -62,22 +56,16 @@ impl WorldviewVariant {
         match self {
             WorldviewVariant::Iso => WorldviewVariantSpec {
                 id: "iso",
-                name_key: "worldview.iso.name",
-                description_key: "worldview.iso.desc",
                 source_filename: "ne_10m_admin_0_countries_iso.geojson",
                 source_sha256: "60eb10aa951f5872507c9436937508b09be4b43dc9fa7aad7644f23ef12e1cad",
             },
             WorldviewVariant::Chn => WorldviewVariantSpec {
                 id: "chn",
-                name_key: "worldview.chn.name",
-                description_key: "worldview.chn.desc",
                 source_filename: "ne_10m_admin_0_countries_chn.geojson",
                 source_sha256: "a13bf5f310fde87bc0a5f994f8ce9bd706cc198d8ee37d221e61c2546b945372",
             },
             WorldviewVariant::Usa => WorldviewVariantSpec {
                 id: "usa",
-                name_key: "worldview.usa.name",
-                description_key: "worldview.usa.desc",
                 source_filename: "ne_10m_admin_0_countries_usa.geojson",
                 source_sha256: "d3166691d3d86f113c0d8db52506f4b72936513691d1593f47010fed01fc0b93",
             },
@@ -101,24 +89,6 @@ impl WorldviewVariant {
                 anyhow::anyhow!("unknown worldview `{s}` (expected one of {ids:?})")
             })
     }
-}
-
-/// The full worldview list this binary offers, derived from [`WorldviewVariant::ALL`].
-///
-/// The single source of truth for the offered set + l10n keys: assets never
-/// embed it, and the runtime reports it directly (e.g. a worldview picker).
-pub fn all_worldviews() -> Vec<Worldview> {
-    WorldviewVariant::ALL
-        .iter()
-        .map(|p| {
-            let s = p.spec();
-            Worldview {
-                id: s.id.into(),
-                name_key: s.name_key.into(),
-                description_key: s.description_key.into(),
-            }
-        })
-        .collect()
 }
 
 #[cfg(test)]

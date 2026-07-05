@@ -43,6 +43,11 @@ pub trait AchievementReader {
     /// query lets the hot single-layer reads avoid computing the others.
     fn region_states(&self, layers: &[AchievementLayer]) -> Result<RegionStateMap>;
 
+    // TODO: It is pretty awkward that we need to deal with `geo` being `None`
+    // in all places. However, in fact, this has to always be `Some` due to
+    // `app_bootstrap.dart`.
+    // So we should do either: 1. treat `None` as an error. 2. think about a 
+    // better way and support lazy init.
     /// The active worldview's geo lookup, or `None` until `set_geo`.
     fn geo(&self) -> Option<&dyn GeoLookup>;
 }

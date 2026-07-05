@@ -137,7 +137,6 @@ pub struct Storage {
     support_dir: String,
     /// Directory holding the bundled `geo_data_<id>.bin` worldview assets;
     /// `set_geo` reads from here. The frontend materializes assets into it.
-    geo_dir: String,
     raw_data_recorder: Mutex<Option<RawDataRecorder>>, // `None` means disabled
     pub cache_dir: String,
     // Hidden so every operation goes through `Storage` and stays in sync; reads
@@ -154,7 +153,6 @@ impl Storage {
         _doc_dir: String,
         support_dir: String,
         cache_dir: String,
-        geo_dir: String,
     ) -> Self {
         let mut main_db = MainDb::open(&support_dir);
         let cache_db: Box<dyn CacheDb + Send> = Box::new(cache_db::new(&cache_dir));
@@ -168,7 +166,6 @@ impl Storage {
             };
         Storage {
             support_dir,
-            geo_dir,
             raw_data_recorder: Mutex::new(raw_data_recorder),
             cache_dir,
             dbs: Mutex::new((main_db, cache_db, achievement_store)),
@@ -389,41 +386,11 @@ impl Storage {
         })
     }
 
-    /// The user's persisted worldview choice (default: the first
-    /// [`geo_data_format::WorldviewVariant`]). Lives in `MainDb` settings, so it
-    /// survives restarts uniformly across backends.
-    pub fn selected_worldview(&self) -> geo_data_format::WorldviewVariant {
-        let default = geo_data_format::WorldviewVariant::ALL[0];
-        let id: String =
-            self.dbs.lock().unwrap().0.get_setting_with_default(
-                main_db::Setting::Worldview,
-                default.spec().id.to_string(),
-            );
-        geo_data_format::WorldviewVariant::from_id(&id).unwrap_or(default)
-    }
-
-    /// Install the worldview selected by the frontend and persist the choice.
-    /// Reads the bundled `geo_data_<id>.bin` from `geo_dir` (the frontend
-    /// materializes it there), then activates it, re-deriving the region index.
-    #[auto_context]
-    pub fn set_geo(&self, worldview: geo_data_format::WorldviewVariant) -> Result<()> {
-        // Persist the choice first (its own lock scope; `set_geo_data` re-locks).
-        self.dbs
-            .lock()
-            .unwrap()
-            .0
-            .set_setting(main_db::Setting::Worldview, worldview.spec().id)?;
-        let path = Path::new(&self.geo_dir).join(format!("geo_data_{}.bin", worldview.spec().id));
-        let bytes = std::fs::read(&path)
-            .with_context(|| format!("reading geo asset {}", path.display()))?;
-        self.set_geo_data(worldview, &bytes)
-    }
-
     /// Install a worldview's geo asset from raw bytes. The asset must declare
     /// the same worldview id it is loaded as (the `.bin` is self-describing); a
     /// mismatch means the wrong bin was supplied.
     #[auto_context]
-    pub fn set_geo_data(
+    pub fn init_or_change_geo_data(
         &self,
         worldview: geo_data_format::WorldviewVariant,
         bytes: &[u8],

@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use memolanes_core::{
     api::achievement::{
         get_explored_area, get_explored_area_by_layer, get_geo, region_detail, region_level_view,
-        region_levels, set_geo, AchievementLayer, GeoEntityId, RegionKind,
+        region_levels, init_or_change_geo_data, AchievementLayer, GeoEntityId, RegionKind,
     },
     api::api,
     api::import::JourneyInfo,
@@ -139,7 +139,7 @@ fn api_achievement_explored_area_and_region_contract() {
         "offered worldviews always available"
     );
     assert!(
-        set_geo("bogus".into()).is_err(),
+        init_or_change_geo_data("bogus".into()).is_err(),
         "unknown worldview rejected"
     );
     assert!(region_levels().unwrap().is_empty(), "no geo → no levels");
@@ -163,7 +163,7 @@ fn api_achievement_explored_area_and_region_contract() {
     }
     // Install the ISO worldview (backend reads it from geo_dir by id), then read
     // it back: selected worldview is "iso" and the offered list contains it.
-    set_geo("iso".into()).unwrap();
+    init_or_change_geo_data("iso".into()).unwrap();
     let after = get_geo().unwrap();
     assert_eq!(after.selected_worldview, "iso");
     assert!(!after.worldviews.is_empty(), "offered worldviews present");

@@ -189,7 +189,7 @@ fn set_geo_reads_bin_from_geo_dir() {
     let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"), geo_dir.clone());
 
     // Missing asset file → error.
-    assert!(storage.set_geo(WorldviewVariant::Iso).is_err());
+    assert!(storage.init_or_change_geo_data(WorldviewVariant::Iso).is_err());
 
     // Materialize the iso bin into geo_dir, then set_geo reads it by id.
     fs::write(
@@ -197,5 +197,5 @@ fn set_geo_reads_bin_from_geo_dir() {
         geo_bytes(),
     )
     .unwrap();
-    storage.set_geo(WorldviewVariant::Iso).unwrap();
+    storage.init_or_change_geo_data(WorldviewVariant::Iso).unwrap();
 }

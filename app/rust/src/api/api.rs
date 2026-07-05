@@ -79,7 +79,6 @@ pub fn init(
     doc_dir: String,
     support_dir: String,
     system_cache_dir: String,
-    geo_dir: String,
 ) {
     let mut already_initialized = true;
     MAIN_STATE.get_or_init(|| {
@@ -97,7 +96,7 @@ pub fn init(
             }
         }
 
-        let mut storage = Storage::init(temp_dir, doc_dir, support_dir, real_cache_dir, geo_dir);
+        let mut storage = Storage::init(temp_dir, doc_dir, support_dir, real_cache_dir);
         info!("initialized");
 
         let default_layer_filter = LayerFilter {

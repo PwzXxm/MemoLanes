@@ -25,16 +25,6 @@ pub struct GeoEntity {
     pub total_area_m2: u64,
 }
 
-/// Runtime/FRB display DTO for a worldview: id + l10n keys. Not persisted —
-/// the `.bin` stores only a worldview id; the full list is derived from
-/// [`crate::WorldviewVariant::ALL`] via [`crate::all_worldviews`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Worldview {
-    pub id: String,
-    pub name_key: String,
-    pub description_key: String,
-}
-
 /// Tile-level classification for the geo lookup table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TileMembership {
