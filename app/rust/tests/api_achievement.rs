@@ -11,11 +11,10 @@
 
 use std::collections::HashMap;
 
-use geo_data_format::Worldview;
 use memolanes_core::{
     api::achievement::{
         get_explored_area, get_explored_area_by_layer, init_or_change_geo_data, region_detail,
-        region_level_view, region_levels, AchievementLayer, GeoEntityId, RegionKind,
+        region_level_view, region_levels, AchievementLayer, GeoEntityId, RegionKind, Worldview,
     },
     api::api,
     api::import::JourneyInfo,
