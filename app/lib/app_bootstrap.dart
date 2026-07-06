@@ -110,7 +110,8 @@ class AppBootstrap {
 
   static Future<void> _initOrChangeGeoData(
       achievement.WorldviewVariant worldview) async {
-    final data = await rootBundle.load('assets/geo/geo_data_iso.bin');
+    final data = await rootBundle
+        .load(achievement.worldviewAssetPath(worldview: worldview));
     await achievement.initOrChangeGeoData(
         worldview: worldview, geoData: data.buffer.asUint8List());
   }
@@ -142,9 +143,9 @@ class AppBootstrap {
       systemCacheDir: (await cacheDirFuture).path,
     );
 
-    // TODO: right now we make sure the geo data is fully loaded during app
-    // initialization, which can be a bit expensive. We should consider delay
-    // this a bit.
+    // TODO: right now we make sure the default geo data is fully loaded during
+    // app initialization, which can be a bit expensive. We should consider
+    // delaying this.
     await _initOrChangeGeoData(achievement.defaultWorldview());
   }
 

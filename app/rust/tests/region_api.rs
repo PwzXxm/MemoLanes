@@ -84,9 +84,9 @@ fn region_read_api_lists_progress_and_completion() {
         fs::create_dir_all(&p).unwrap();
         p.into_os_string().into_string().unwrap()
     };
-    let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"), sub("g"));
+    let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"));
     storage
-        .set_geo_data(WorldviewVariant::Iso, &geo_bytes())
+        .init_or_change_geo_data(WorldviewVariant::Iso, &geo_bytes())
         .unwrap();
 
     // Default journey in France, Flight journey over Germany.
@@ -149,14 +149,14 @@ fn region_read_api_lists_progress_and_completion() {
 }
 
 #[test]
-fn set_geo_data_rejects_mismatched_worldview_id() {
+fn init_or_change_geo_data_rejects_mismatched_worldview_id() {
     let dir = TempDir::new("test_geo_mismatch").unwrap();
     let sub = |s: &str| {
         let p = dir.path().join(s);
         fs::create_dir_all(&p).unwrap();
         p.into_os_string().into_string().unwrap()
     };
-    let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"), sub("g"));
+    let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"));
 
     // A bin that declares "chn", loaded as Iso, must be rejected.
     let tiles = vec![TileMembership::None; TILE_COUNT];
@@ -169,7 +169,7 @@ fn set_geo_data_rejects_mismatched_worldview_id() {
     )
     .unwrap();
     let err = storage
-        .set_geo_data(WorldviewVariant::Iso, &bytes)
+        .init_or_change_geo_data(WorldviewVariant::Iso, &bytes)
         .expect_err("mismatched worldview id must be rejected");
     assert!(
         err.to_string().contains("declares worldview"),
@@ -178,24 +178,16 @@ fn set_geo_data_rejects_mismatched_worldview_id() {
 }
 
 #[test]
-fn set_geo_reads_bin_from_geo_dir() {
-    let dir = TempDir::new("test_geo_dir").unwrap();
+fn init_or_change_geo_data_rejects_invalid_bytes() {
+    let dir = TempDir::new("test_geo_invalid_bytes").unwrap();
     let sub = |s: &str| {
         let p = dir.path().join(s);
         fs::create_dir_all(&p).unwrap();
         p.into_os_string().into_string().unwrap()
     };
-    let geo_dir = sub("g");
-    let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"), geo_dir.clone());
+    let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"));
 
-    // Missing asset file → error.
-    assert!(storage.init_or_change_geo_data(WorldviewVariant::Iso).is_err());
-
-    // Materialize the iso bin into geo_dir, then set_geo reads it by id.
-    fs::write(
-        std::path::Path::new(&geo_dir).join("geo_data_iso.bin"),
-        geo_bytes(),
-    )
-    .unwrap();
-    storage.init_or_change_geo_data(WorldviewVariant::Iso).unwrap();
+    assert!(storage
+        .init_or_change_geo_data(WorldviewVariant::Iso, b"not a geo asset")
+        .is_err());
 }

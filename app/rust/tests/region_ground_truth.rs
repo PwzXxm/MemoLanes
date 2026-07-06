@@ -223,10 +223,9 @@ fn region_api_reports_correct_countries_and_areas() {
         sub(&dir, "d"),
         sub(&dir, "s"),
         sub(&dir, "c"),
-        sub(&dir, "geo"),
     );
     storage
-        .set_geo_data(WorldviewVariant::Iso, &geo_bytes)
+        .init_or_change_geo_data(WorldviewVariant::Iso, &geo_bytes)
         .unwrap();
     for (i, tile, block, _) in &placements {
         insert(

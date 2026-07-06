@@ -135,8 +135,6 @@ type Dbs = (
 
 pub struct Storage {
     support_dir: String,
-    /// Directory holding the bundled `geo_data_<id>.bin` worldview assets;
-    /// `set_geo` reads from here. The frontend materializes assets into it.
     raw_data_recorder: Mutex<Option<RawDataRecorder>>, // `None` means disabled
     pub cache_dir: String,
     // Hidden so every operation goes through `Storage` and stays in sync; reads

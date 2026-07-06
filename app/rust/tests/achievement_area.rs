@@ -25,7 +25,6 @@ where
         sub_folder("doc/"),
         sub_folder("support/"),
         sub_folder("cache/"),
-        sub_folder("geo/"),
     );
     f(storage);
 }

@@ -114,10 +114,9 @@ fn on_demand_areas_and_region_states() {
         sub(&temp_dir, "doc/"),
         sub(&temp_dir, "support/"),
         sub(&temp_dir, "cache/"),
-        sub(&temp_dir, "geo/"),
     );
     storage
-        .set_geo_data(WorldviewVariant::Iso, &geo_bytes)
+        .init_or_change_geo_data(WorldviewVariant::Iso, &geo_bytes)
         .unwrap();
 
     // A Default journey and a Flight journey, in different blocks of France, so
@@ -172,7 +171,6 @@ fn on_demand_without_geo_has_no_regions() {
         sub(&temp_dir, "doc/"),
         sub(&temp_dir, "support/"),
         sub(&temp_dir, "cache/"),
-        sub(&temp_dir, "geo/"),
     );
     insert(
         &storage,

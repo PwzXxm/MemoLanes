@@ -74,12 +74,7 @@ fn reload_main_map_bitmap(storage: &Storage, main_map_state: &mut MainMapState) 
     Ok(())
 }
 
-pub fn init(
-    temp_dir: String,
-    doc_dir: String,
-    support_dir: String,
-    system_cache_dir: String,
-) {
+pub fn init(temp_dir: String, doc_dir: String, support_dir: String, system_cache_dir: String) {
     let mut already_initialized = true;
     MAIN_STATE.get_or_init(|| {
         already_initialized = false;

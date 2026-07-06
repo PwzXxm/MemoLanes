@@ -26,8 +26,8 @@ pub enum WorldviewVariant {
     Usa,
 }
 
-/// All per-worldview facts. `id` feed the embedded worldview list (runtime-facing);
-/// `source_*` drive the offline download.
+/// All per-worldview facts. `id` names the runtime asset; `source_*` drive the
+/// offline download.
 pub struct WorldviewVariantSpec {
     /// Externally-meaningful worldview id (also the `geo_data_<id>.bin` suffix).
     pub id: &'static str,
@@ -149,17 +149,6 @@ mod tests {
         assert_eq!(WorldviewVariant::ALL.len(), 3);
         for &p in WorldviewVariant::ALL {
             assert_eq!(WorldviewVariant::from_id(p.spec().id).unwrap(), p);
-        }
-    }
-
-    #[test]
-    fn all_worldviews_track_all() {
-        let wv = all_worldviews();
-        assert_eq!(wv.len(), WorldviewVariant::ALL.len());
-        for (w, &p) in wv.iter().zip(WorldviewVariant::ALL) {
-            assert_eq!(w.id, p.spec().id);
-            assert_eq!(w.name_key, p.spec().name_key);
-            assert_eq!(w.description_key, p.spec().description_key);
         }
     }
 }

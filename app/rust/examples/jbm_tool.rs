@@ -110,7 +110,6 @@ fn process_data_dir(dir: &str) -> Result<JourneyBitmap> {
         dir.to_string(),
         dir.to_string(),
         dir.to_string(),
-        dir.to_string(),
     );
     init_main_map()?;
 

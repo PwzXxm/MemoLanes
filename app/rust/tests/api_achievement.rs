@@ -5,16 +5,17 @@
 //! public api surface.
 //!
 //! Journeys are seeded through the real public ingest path (GPS points →
-//! finalize), then read back via `get_explored_area*`. The geo setter/getter
-//! (`set_geo`/`get_geo`) and the region entry points are exercised against the
-//! real `assets/geo/geo_data_iso.bin` worldview asset (skipped when it is absent).
+//! finalize), then read back via `get_explored_area*`. The geo initializer and
+//! the region entry points are exercised against the real
+//! `assets/geo/geo_data_iso.bin` worldview asset (skipped when it is absent).
 
 use std::collections::HashMap;
 
+use geo_data_format::WorldviewVariant;
 use memolanes_core::{
     api::achievement::{
-        get_explored_area, get_explored_area_by_layer, get_geo, region_detail, region_level_view,
-        region_levels, init_or_change_geo_data, AchievementLayer, GeoEntityId, RegionKind,
+        get_explored_area, get_explored_area_by_layer, init_or_change_geo_data, region_detail,
+        region_level_view, region_levels, AchievementLayer, GeoEntityId, RegionKind,
     },
     api::api,
     api::import::JourneyInfo,
@@ -53,20 +54,7 @@ fn api_achievement_explored_area_and_region_contract() {
         fs::create_dir(&p).unwrap();
         p.into_os_string().into_string().unwrap()
     };
-    // Point geo_dir at the repo's real asset dir so `set_geo("iso")` reads the
-    // bundled `geo_data_iso.bin` exactly as the app does after materialization.
-    let geo_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../assets/geo")
-        .to_str()
-        .unwrap()
-        .to_string();
-    api::init(
-        sub("temp"),
-        sub("doc"),
-        sub("support"),
-        sub("cache"),
-        geo_dir,
-    );
+    api::init(sub("temp"), sub("doc"), sub("support"), sub("cache"));
 
     use AchievementLayer::*;
 
@@ -128,20 +116,10 @@ fn api_achievement_explored_area_and_region_contract() {
         "disjoint union ≈ sum: all={all} d={default} f={flight_area}"
     );
 
-    // --- Geo-absent contract: before `set_geo`, no geo data is installed, so no
-    // regions — but a default worldview is already selected. ---
+    // --- Geo-absent contract: before geo bytes are supplied, no geo data is
+    // installed, so no regions. ---
     // (`api::init` is a process-global singleton, so this binary keeps a single
     // test; the geo install below continues in the same state.)
-    let before = get_geo().unwrap();
-    assert_eq!(before.selected_worldview, "iso", "default worldview is iso");
-    assert!(
-        !before.worldviews.is_empty(),
-        "offered worldviews always available"
-    );
-    assert!(
-        init_or_change_geo_data("bogus".into()).is_err(),
-        "unknown worldview rejected"
-    );
     assert!(region_levels().unwrap().is_empty(), "no geo → no levels");
     let view = region_level_view(Default, RegionKind::Country, None).unwrap();
     assert_eq!((view.visited_count, view.region_count), (0, 0));
@@ -152,7 +130,7 @@ fn api_achievement_explored_area_and_region_contract() {
         "no geo → no detail"
     );
 
-    // --- Geo setter/getter roundtrip against the real ISO asset. ---
+    // --- Geo initializer against the real ISO asset. ---
     let asset = Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/geo/geo_data_iso.bin");
     if !asset.exists() {
         eprintln!(
@@ -161,16 +139,8 @@ fn api_achievement_explored_area_and_region_contract() {
         );
         return;
     }
-    // Install the ISO worldview (backend reads it from geo_dir by id), then read
-    // it back: selected worldview is "iso" and the offered list contains it.
-    init_or_change_geo_data("iso".into()).unwrap();
-    let after = get_geo().unwrap();
-    assert_eq!(after.selected_worldview, "iso");
-    assert!(!after.worldviews.is_empty(), "offered worldviews present");
-    assert!(
-        after.worldviews.iter().any(|w| w.id == "iso"),
-        "offered worldview list includes the selected worldview"
-    );
+    let geo_bytes = fs::read(&asset).unwrap();
+    init_or_change_geo_data(WorldviewVariant::Iso, &geo_bytes).unwrap();
     // Geo is now installed, so the seeded journeys light up region reads.
     assert!(!region_levels().unwrap().is_empty(), "geo → region levels");
 }
