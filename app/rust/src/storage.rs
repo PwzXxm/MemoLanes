@@ -127,11 +127,11 @@ type FinalizedJourneyChangedCallback = Box<dyn Fn(&Storage) + Send + Sync + 'sta
 
 /// The three databases kept transactionally in sync behind one lock: the main
 /// journey store, the bitmap cache, and the achievement store.
-type Dbs = (
-    MainDb,
-    Box<dyn CacheDb + Send>,
-    Box<dyn AchievementStore + Send>,
-);
+struct Dbs {
+    main_db: MainDb,
+    cache_db: Box<dyn CacheDb + Send>,
+    achievement_store: Box<dyn AchievementStore + Send>,
+}
 
 pub struct Storage {
     support_dir: String,
@@ -166,7 +166,11 @@ impl Storage {
             support_dir,
             raw_data_recorder: Mutex::new(raw_data_recorder),
             cache_dir,
-            dbs: Mutex::new((main_db, cache_db, achievement_store)),
+            dbs: Mutex::new(Dbs {
+                main_db,
+                cache_db,
+                achievement_store,
+            }),
             finalized_journey_changed_callback: Box::new(|_| {}),
         }
     }
@@ -177,7 +181,11 @@ impl Storage {
         F: FnOnce(&mut main_db::Txn) -> Result<O>,
     {
         let mut dbs = self.dbs.lock().unwrap();
-        let (ref mut main_db, ref cache_db, ref achievement_store) = *dbs;
+        let Dbs {
+            main_db,
+            cache_db,
+            achievement_store,
+        } = &mut *dbs;
 
         let mut finalized_journey_changed = false;
 
@@ -227,7 +235,7 @@ impl Storage {
             if raw_data_recorder.is_none() {
                 *raw_data_recorder = Some(RawDataRecorder::init(&self.support_dir));
                 info!("[storage] raw data mod enabled");
-                let main_db = &mut self.dbs.lock().unwrap().0;
+                let main_db = &mut self.dbs.lock().unwrap().main_db;
                 main_db
                     .set_setting(crate::main_db::Setting::RawDataMode, true)
                     .unwrap();
@@ -236,7 +244,7 @@ impl Storage {
             info!("[storage] raw data mod disabled");
             // `drop` should do the right thing and release all resources.
             *raw_data_recorder = None;
-            let main_db = &mut self.dbs.lock().unwrap().0;
+            let main_db = &mut self.dbs.lock().unwrap().main_db;
             main_db
                 .set_setting(crate::main_db::Setting::RawDataMode, false)
                 .unwrap();
@@ -288,7 +296,7 @@ impl Storage {
         }
         drop(raw_data_recorder);
 
-        let main_db = &mut self.dbs.lock().unwrap().0;
+        let main_db = &mut self.dbs.lock().unwrap().main_db;
         main_db.record(raw_data, process_result).unwrap();
     }
 
@@ -349,7 +357,9 @@ impl Storage {
         F: FnOnce(&JourneySnapshot) -> Result<O>,
     {
         let mut dbs = self.dbs.lock().unwrap();
-        let (ref mut main_db, ref cache_db, _) = *dbs;
+        let Dbs {
+            main_db, cache_db, ..
+        } = &mut *dbs;
         main_db.with_txn(|txn| {
             let output = f(&JourneySnapshot::new(txn, cache_db.as_ref()))?;
             // The snapshot only exposes reads, so a journey action must
@@ -374,7 +384,11 @@ impl Storage {
     {
         // TODO: locks here for now, add MVCC or background thread to recompute
         let mut dbs = self.dbs.lock().unwrap();
-        let (ref mut main_db, ref cache_db, ref achievement_store) = *dbs;
+        let Dbs {
+            main_db,
+            cache_db,
+            achievement_store,
+        } = &mut *dbs;
         main_db.with_txn(|txn| {
             let snapshot = JourneySnapshot::new(txn, cache_db.as_ref());
             let reader = achievement_store.reader(&snapshot)?;
@@ -400,7 +414,7 @@ impl Storage {
             geo.worldview_id(),
             worldview.spec().id
         );
-        let achievement_store = &mut self.dbs.lock().unwrap().2;
+        let achievement_store = &mut self.dbs.lock().unwrap().achievement_store;
         achievement_store.set_geo(worldview, Box::new(geo))?;
         Ok(())
     }
@@ -448,7 +462,7 @@ impl Storage {
 
     #[auto_context]
     pub fn clear_all_cache(&self) -> Result<()> {
-        let cache_db = &self.dbs.lock().unwrap().1;
+        let cache_db = &self.dbs.lock().unwrap().cache_db;
         cache_db.clear_all()?;
         Ok(())
     }
@@ -459,8 +473,8 @@ impl Storage {
         debug!("[storage] flushing");
 
         let dbs = self.dbs.lock().unwrap();
-        dbs.0.flush()?;
-        dbs.1.flush()?;
+        dbs.main_db.flush()?;
+        dbs.cache_db.flush()?;
         drop(dbs);
 
         let mut raw_data_recorder = self.raw_data_recorder.lock().unwrap();
