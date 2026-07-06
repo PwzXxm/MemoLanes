@@ -1,6 +1,6 @@
 //! Natural Earth source download helper.
 //!
-//! The pinned commit/URL/hash live in `geo_data_format::worldview_variant` (deliberate change,
+//! The pinned commit/URL/hash live in `geo_data_format::worldview` (deliberate change,
 //! single PR) rather than as CLI arguments; this module just fetches + verifies.
 
 use std::fs;
@@ -9,7 +9,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Result};
-use geo_data_format::WorldviewVariant;
+use geo_data_format::Worldview;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha2::{Digest, Sha256};
 
@@ -17,7 +17,7 @@ use crate::atomic_write::write_atomically_with;
 
 /// Ensure `path` contains the pinned Natural Earth GeoJSON. If the file is
 /// missing or its SHA-256 doesn't match the pin, re-download and verify.
-pub fn ensure_geojson(path: &Path, worldview: WorldviewVariant) -> Result<()> {
+pub fn ensure_geojson(path: &Path, worldview: Worldview) -> Result<()> {
     let url = worldview.source_url();
     let expected = worldview.spec().source_sha256;
     match sha256_of(path)? {

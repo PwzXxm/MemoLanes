@@ -87,12 +87,12 @@ it has never seen. It never renumbers or removes existing ids.
 
 Update the registry whenever a new or changed source introduces a country code
 the registry has not seen yet (e.g. bumping the Natural Earth pin in
-`app/rust/geo_data_format/src/worldview_variant.rs`, or adding a worldview).
+`app/rust/geo_data_format/src/worldview.rs`, or adding a worldview).
 
 From the `app/` directory:
 
 ```bash
-just registry-gen     # union over every shipped worldview (WorldviewVariant::ALL); downloads
+just registry-gen     # union over every shipped worldview (Worldview::ALL); downloads
                       # the pinned sources if missing, then rewrites the TOML
 ```
 
@@ -107,7 +107,7 @@ newly appended ids; existing ids must not move.
 ### Direct invocation
 
 ```bash
-# From this crate dir. No args = union over WorldviewVariant::ALL (same as `just registry-gen`).
+# From this crate dir. No args = union over Worldview::ALL (same as `just registry-gen`).
 cargo run --release --bin registry_gen
 
 # Register one specific file under one worldview (paths are repo-relative, POSIX):
@@ -130,7 +130,7 @@ automatically rather than silently shipping stale ids.
 
 - **i18n.** Each entity's display name is carried as a Flutter l10n *key*, not a
   string — the rasterizer derives `country.<ADM0_A3>.name` and
-  `continent.<code>.name` (worldviews use `worldview.<id>.name` from `worldview_variant.rs`).
+  `continent.<code>.name` (worldviews use `worldview.<id>.name` from `worldview.rs`).
   The remaining work is ensuring every generated key has a localized string in
   `app/assets/translations/*.json` for each locale, so a newly registered code
   can't ship without its translated name. See the `TODO(i18n)` in

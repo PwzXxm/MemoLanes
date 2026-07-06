@@ -4,7 +4,7 @@
 //! Mirrors `cache_db`'s `CacheDb` trait + `new()` factory.
 
 use anyhow::Result;
-use geo_data_format::WorldviewVariant;
+use geo_data_format::Worldview;
 
 use crate::achievement::compute::region_state::RegionStateMap;
 use crate::achievement::layer::AchievementLayer;
@@ -20,11 +20,7 @@ pub trait AchievementStore: Send {
 
     /// Supply (or switch) the active worldview's geo lookup, kept for region reads.
     /// A worldview change re-derives worldview-scoped state.
-    fn set_geo(
-        &mut self,
-        worldview: WorldviewVariant,
-        geo: Box<dyn GeoLookup + Send>,
-    ) -> Result<()>;
+    fn set_geo(&mut self, worldview: Worldview, geo: Box<dyn GeoLookup + Send>) -> Result<()>;
 
     /// Open a reader over `snapshot`: computes lazily, borrowing both `self`
     /// (geo) and `snapshot`, so every value it serves reflects one snapshot.

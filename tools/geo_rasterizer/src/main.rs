@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use geo_data_format::{write_geo_data, WorldviewVariant};
+use geo_data_format::{write_geo_data, Worldview};
 use geo_rasterizer::{
     area::populate_total_areas,
     atomic_write::write_atomically,
@@ -21,7 +21,7 @@ use geo_rasterizer::{
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    /// Which worldview to rasterize. Absent ⇒ batch over every `WorldviewVariant::ALL`.
+    /// Which worldview to rasterize. Absent ⇒ batch over every `Worldview::ALL`.
     #[arg(long)]
     worldview: Option<String>,
 
@@ -55,7 +55,7 @@ fn manifest() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-fn default_countries(worldview: WorldviewVariant) -> PathBuf {
+fn default_countries(worldview: Worldview) -> PathBuf {
     manifest()
         .join("natural_earth")
         .join(worldview.spec().source_filename)
@@ -65,7 +65,7 @@ fn default_registry() -> PathBuf {
     manifest().join("geo_entity_registry.toml")
 }
 
-fn default_output(worldview: WorldviewVariant) -> PathBuf {
+fn default_output(worldview: Worldview) -> PathBuf {
     manifest()
         .join("../../app/assets/geo")
         .join(format!("geo_data_{}.bin", worldview.spec().id))
@@ -79,7 +79,7 @@ fn main() -> Result<()> {
     match &args.worldview {
         // Single mode: resolve the one worldview, honoring any path overrides.
         Some(id) => {
-            let worldview = WorldviewVariant::from_id(id)?;
+            let worldview = Worldview::from_id(id)?;
             rasterize_one(
                 worldview,
                 args.countries
@@ -91,9 +91,9 @@ fn main() -> Result<()> {
             )?;
         }
         // Batch mode: every shipped worldview with derived paths. A new worldview in
-        // `WorldviewVariant::ALL` is rasterized automatically.
+        // `Worldview::ALL` is rasterized automatically.
         None => {
-            for &worldview in WorldviewVariant::ALL {
+            for &worldview in Worldview::ALL {
                 rasterize_one(
                     worldview,
                     default_countries(worldview),
@@ -113,7 +113,7 @@ fn main() -> Result<()> {
 /// Rasterize one worldview. Returns early (this fn only — never aborting a batch
 /// loop) after `ensure_source` when `download_only` is set.
 fn rasterize_one(
-    worldview: WorldviewVariant,
+    worldview: Worldview,
     countries: PathBuf,
     registry_path: PathBuf,
     output: PathBuf,

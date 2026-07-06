@@ -59,11 +59,11 @@ pub fn cell_index(x: u8, y: u8) -> usize {
 mod format;
 mod packed_tile;
 mod types;
-mod worldview_variant;
+mod worldview;
 
 pub use format::{
     expected_total_len, read_geo_data, write_geo_data, GeoData, TileEntry, HEADER_LEN,
 };
 pub use packed_tile::PackedTile;
 pub use types::*;
-pub use worldview_variant::*;
+pub use worldview::*;

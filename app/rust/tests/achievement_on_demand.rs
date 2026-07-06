@@ -7,8 +7,7 @@ use std::fs;
 
 use chrono::NaiveDate;
 use geo_data_format::{
-    write_geo_data, GeoEntity, GeoEntityId, GeoEntityKind, TileMembership, WorldviewVariant,
-    TILE_COUNT,
+    write_geo_data, GeoEntity, GeoEntityId, GeoEntityKind, TileMembership, Worldview, TILE_COUNT,
 };
 use memolanes_core::{
     achievement::{
@@ -43,7 +42,7 @@ fn synthetic_geo_bytes() -> Vec<u8> {
     tiles[0] = TileMembership::Single(FR);
     write_geo_data(
         &entities,
-        WorldviewVariant::Iso.spec().id,
+        Worldview::Iso.spec().id,
         &tiles,
         &BTreeMap::new(),
         [0u8; 32],
@@ -116,7 +115,7 @@ fn on_demand_areas_and_region_states() {
         sub(&temp_dir, "cache/"),
     );
     storage
-        .init_or_change_geo_data(WorldviewVariant::Iso, &geo_bytes)
+        .init_or_change_geo_data(Worldview::Iso, &geo_bytes)
         .unwrap();
 
     // A Default journey and a Flight journey, in different blocks of France, so
@@ -137,7 +136,7 @@ fn on_demand_areas_and_region_states() {
     // On-demand store with the same worldview geo.
     let mut oss = OnDemandStore::new();
     oss.set_geo(
-        WorldviewVariant::Iso,
+        Worldview::Iso,
         Box::new(GeoIndex::from_bytes(&geo_bytes).unwrap()),
     )
     .unwrap();

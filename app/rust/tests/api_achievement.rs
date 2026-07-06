@@ -11,7 +11,7 @@
 
 use std::collections::HashMap;
 
-use geo_data_format::WorldviewVariant;
+use geo_data_format::Worldview;
 use memolanes_core::{
     api::achievement::{
         get_explored_area, get_explored_area_by_layer, init_or_change_geo_data, region_detail,
@@ -140,7 +140,7 @@ fn api_achievement_explored_area_and_region_contract() {
         return;
     }
     let geo_bytes = fs::read(&asset).unwrap();
-    init_or_change_geo_data(WorldviewVariant::Iso, &geo_bytes).unwrap();
+    init_or_change_geo_data(Worldview::Iso, &geo_bytes).unwrap();
     // Geo is now installed, so the seeded journeys light up region reads.
     assert!(!region_levels().unwrap().is_empty(), "geo → region levels");
 }

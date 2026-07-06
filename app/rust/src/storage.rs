@@ -390,7 +390,7 @@ impl Storage {
     #[auto_context]
     pub fn init_or_change_geo_data(
         &self,
-        worldview: geo_data_format::WorldviewVariant,
+        worldview: geo_data_format::Worldview,
         bytes: &[u8],
     ) -> Result<()> {
         let geo = GeoIndex::from_bytes(bytes)?;

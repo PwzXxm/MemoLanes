@@ -3,8 +3,8 @@ use std::fs;
 
 use chrono::NaiveDate;
 use geo_data_format::{
-    tile_index, write_geo_data, GeoEntity, GeoEntityId, GeoEntityKind, TileMembership,
-    WorldviewVariant, CELLS_PER_TILE, TILE_COUNT,
+    tile_index, write_geo_data, GeoEntity, GeoEntityId, GeoEntityKind, TileMembership, Worldview,
+    CELLS_PER_TILE, TILE_COUNT,
 };
 use memolanes_core::{
     achievement::layer::AchievementLayer,
@@ -42,7 +42,7 @@ fn geo_bytes() -> Vec<u8> {
     blocks.insert((1, 0), cells);
     write_geo_data(
         &entities,
-        WorldviewVariant::Iso.spec().id,
+        Worldview::Iso.spec().id,
         &tiles,
         &blocks,
         [0u8; 32],
@@ -86,7 +86,7 @@ fn region_read_api_lists_progress_and_completion() {
     };
     let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"));
     storage
-        .init_or_change_geo_data(WorldviewVariant::Iso, &geo_bytes())
+        .init_or_change_geo_data(Worldview::Iso, &geo_bytes())
         .unwrap();
 
     // Default journey in France, Flight journey over Germany.
@@ -162,14 +162,14 @@ fn init_or_change_geo_data_rejects_mismatched_worldview_id() {
     let tiles = vec![TileMembership::None; TILE_COUNT];
     let bytes = write_geo_data(
         &[],
-        WorldviewVariant::Chn.spec().id,
+        Worldview::Chn.spec().id,
         &tiles,
         &BTreeMap::new(),
         [0u8; 32],
     )
     .unwrap();
     let err = storage
-        .init_or_change_geo_data(WorldviewVariant::Iso, &bytes)
+        .init_or_change_geo_data(Worldview::Iso, &bytes)
         .expect_err("mismatched worldview id must be rejected");
     assert!(
         err.to_string().contains("declares worldview"),
@@ -188,6 +188,6 @@ fn init_or_change_geo_data_rejects_invalid_bytes() {
     let storage = Storage::init(sub("t"), sub("d"), sub("s"), sub("c"));
 
     assert!(storage
-        .init_or_change_geo_data(WorldviewVariant::Iso, b"not a geo asset")
+        .init_or_change_geo_data(Worldview::Iso, b"not a geo asset")
         .is_err());
 }

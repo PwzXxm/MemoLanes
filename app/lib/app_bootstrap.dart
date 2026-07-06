@@ -109,7 +109,7 @@ class AppBootstrap {
   }
 
   static Future<void> _initOrChangeGeoData(
-      achievement.WorldviewVariant worldview) async {
+      achievement.Worldview worldview) async {
     final data = await rootBundle
         .load(achievement.worldviewAssetPath(worldview: worldview));
     await achievement.initOrChangeGeoData(

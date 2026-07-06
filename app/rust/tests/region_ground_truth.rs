@@ -20,7 +20,7 @@ use std::fs;
 use std::path::Path;
 
 use chrono::NaiveDate;
-use geo_data_format::{GeoEntityKind, WorldviewVariant};
+use geo_data_format::{GeoEntityKind, Worldview};
 use memolanes_core::{
     achievement::compute::region_state::RegionStateMap,
     achievement::layer::AchievementLayer,
@@ -225,7 +225,7 @@ fn region_api_reports_correct_countries_and_areas() {
         sub(&dir, "c"),
     );
     storage
-        .init_or_change_geo_data(WorldviewVariant::Iso, &geo_bytes)
+        .init_or_change_geo_data(Worldview::Iso, &geo_bytes)
         .unwrap();
     for (i, tile, block, _) in &placements {
         insert(

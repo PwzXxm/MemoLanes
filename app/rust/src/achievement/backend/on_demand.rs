@@ -3,7 +3,7 @@
 //! pure functions in this module.
 
 use anyhow::Result;
-use geo_data_format::WorldviewVariant;
+use geo_data_format::Worldview;
 
 use crate::achievement::compute::explored_area::explored_areas_from_snapshot;
 use crate::achievement::compute::region_state::{compute_region_states, RegionStateMap};
@@ -31,11 +31,7 @@ impl AchievementStore for OnDemandStore {
 
     /// No persistence/cache, so the worldview id isn't needed — only the geo
     /// lookup drives reads.
-    fn set_geo(
-        &mut self,
-        _worldview: WorldviewVariant,
-        geo: Box<dyn GeoLookup + Send>,
-    ) -> Result<()> {
+    fn set_geo(&mut self, _worldview: Worldview, geo: Box<dyn GeoLookup + Send>) -> Result<()> {
         self.geo = Some(geo);
         Ok(())
     }

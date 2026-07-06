@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use geo_data_format::{
-    write_geo_data, GeoEntity, GeoEntityId, GeoEntityKind, TileMembership, WorldviewVariant,
+    write_geo_data, GeoEntity, GeoEntityId, GeoEntityKind, TileMembership, Worldview,
     CELLS_PER_TILE, TILE_COUNT,
 };
 use memolanes_core::{
@@ -43,7 +43,7 @@ fn synthetic_geo() -> GeoIndex {
 
     let bytes = write_geo_data(
         &entities,
-        WorldviewVariant::Iso.spec().id,
+        Worldview::Iso.spec().id,
         &tiles,
         &blocks,
         [0u8; 32],
@@ -130,7 +130,7 @@ fn asset_declares_its_worldview_id() {
     let tiles = vec![TileMembership::None; TILE_COUNT];
     let bytes = write_geo_data(
         &entities,
-        WorldviewVariant::Chn.spec().id,
+        Worldview::Chn.spec().id,
         &tiles,
         &BTreeMap::new(),
         [0u8; 32],

@@ -23,7 +23,7 @@ const TILE_INDEX_ZSTD_LEVEL: i32 = 19;
 #[derive(Serialize, Deserialize)]
 struct MetaSection {
     entities: Vec<GeoEntity>,
-    /// The single worldview this asset represents (its [`crate::WorldviewVariant`]
+    /// The single worldview this asset represents (its [`crate::Worldview`]
     /// id). Makes the `.bin` self-describing so a load can reject a bin served
     /// under the wrong worldview.
     worldview_id: String,

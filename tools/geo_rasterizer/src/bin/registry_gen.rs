@@ -1,7 +1,7 @@
 //! Bootstrap / extend the frozen geo-entity id registry.
 //!
 //! APPEND ONLY: never renumbers or removes ids. With no `--source`, it unions
-//! every shipped worldview (`WorldviewVariant::ALL`) from repo-relative defaults, downloading the
+//! every shipped worldview (`Worldview::ALL`) from repo-relative defaults, downloading the
 //! pinned Natural Earth source if missing — so the registry is the union across
 //! all worldviews. Pass `--source <worldview-id>:<path>` to register specific files
 //! instead. Commit the resulting geo_entity_registry.toml in the same PR as the
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 use clap::Parser;
-use geo_data_format::WorldviewVariant;
+use geo_data_format::Worldview;
 use geo_rasterizer::download::ensure_geojson;
 use geo_rasterizer::entities::continent_code_pub;
 use geo_rasterizer::parse::parse_geojson;
@@ -23,7 +23,7 @@ use geo_rasterizer::registry::{
 #[command(version, about = "Append-only geo-entity id registry generator")]
 struct Args {
     /// Explicit labeled worldview sources: `<worldview-id>:<path>`. When omitted, every
-    /// shipped worldview (`WorldviewVariant::ALL`) is unioned from repo-relative defaults.
+    /// shipped worldview (`Worldview::ALL`) is unioned from repo-relative defaults.
     /// Processed in given order; first source's codes get the lowest ids
     /// (stable).
     #[arg(long = "source", value_name = "worldview:PATH", num_args = 1..)]
@@ -44,14 +44,14 @@ fn default_registry() -> PathBuf {
     manifest().join("geo_entity_registry.toml")
 }
 
-fn default_countries(worldview: WorldviewVariant) -> PathBuf {
+fn default_countries(worldview: Worldview) -> PathBuf {
     manifest()
         .join("natural_earth")
         .join(worldview.spec().source_filename)
 }
 
 /// Register every ADM0_A3 (and its continent) found in `path` under `worldview`.
-fn register_source(reg: &mut Registry, worldview: WorldviewVariant, path: &Path) -> Result<()> {
+fn register_source(reg: &mut Registry, worldview: Worldview, path: &Path) -> Result<()> {
     let features = parse_geojson(path)?;
     let mut items: Vec<(String, bool, geo_types::MultiPolygon<f64>)> = Vec::new();
     for f in &features {
@@ -85,7 +85,7 @@ fn main() -> Result<()> {
     if args.sources.is_empty() {
         // Default: union every shipped worldview from repo-relative defaults,
         // downloading the pinned Natural Earth source if missing.
-        for &worldview in WorldviewVariant::ALL {
+        for &worldview in Worldview::ALL {
             let path = default_countries(worldview);
             ensure_geojson(&path, worldview)?;
             register_source(&mut reg, worldview, &path)?;
@@ -97,7 +97,7 @@ fn main() -> Result<()> {
                 Some(pair) => pair,
                 None => bail!("--source must be in worldview:PATH form, got: {source}"),
             };
-            let worldview = WorldviewVariant::from_id(worldview_str)?;
+            let worldview = Worldview::from_id(worldview_str)?;
             register_source(&mut reg, worldview, &PathBuf::from(path_str))?;
         }
     }

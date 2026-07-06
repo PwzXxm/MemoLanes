@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 
 use flutter_rust_bridge::frb;
-use geo_data_format::WorldviewVariant;
+use geo_data_format::Worldview;
 
 pub use crate::achievement::layer::AchievementLayer;
 use crate::achievement::read_model::region;
@@ -18,8 +18,8 @@ pub use geo_data_format::GeoEntityId;
 #[frb(mirror(GeoEntityId))]
 pub struct _GeoEntityId(pub u32);
 
-#[frb(mirror(WorldviewVariant))]
-pub enum _WorldviewVariant {
+#[frb(mirror(Worldview))]
+pub enum _Worldview {
     Iso,
     Chn,
     Usa,
@@ -27,26 +27,26 @@ pub enum _WorldviewVariant {
 
 // TODO: change these to a method instead of a function.
 #[frb(sync)]
-pub fn worldview_asset_path(worldview: &WorldviewVariant) -> String {
+pub fn worldview_asset_path(worldview: &Worldview) -> String {
     format!("assets/geo/geo_data_{}.bin", worldview.spec().id)
 }
 
 #[frb(sync)]
-pub fn worldview_of_string_opt(str: &str) -> Option<WorldviewVariant> {
-    WorldviewVariant::from_id(str).ok()
+pub fn worldview_of_string_opt(str: &str) -> Option<Worldview> {
+    Worldview::from_id(str).ok()
 }
 
 #[frb(sync)]
-pub fn worldview_to_string(worldview: &WorldviewVariant) -> &'static str {
+pub fn worldview_to_string(worldview: &Worldview) -> &'static str {
     worldview.spec().id
 }
 
 #[frb(sync)]
-pub fn default_worldview() -> WorldviewVariant {
-    WorldviewVariant::ALL[0]
+pub fn default_worldview() -> Worldview {
+    Worldview::ALL[0]
 }
 
-pub fn init_or_change_geo_data(worldview: WorldviewVariant, geo_data: &[u8]) -> Result<()> {
+pub fn init_or_change_geo_data(worldview: Worldview, geo_data: &[u8]) -> Result<()> {
     crate::api::api::get()
         .storage
         .init_or_change_geo_data(worldview, geo_data)

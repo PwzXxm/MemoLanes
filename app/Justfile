@@ -146,11 +146,11 @@ geo-rasterizer-test:
 get-frb-version:
     @awk '/flutter_rust_bridge:/ { print $2 }' pubspec.yaml
 
-# Regenerate the frozen id registry (append-only union over WorldviewVariant::ALL); a prerequisite of rasterize-geo so the CI guardrail diff is meaningful
+# Regenerate the frozen id registry (append-only union over Worldview::ALL); a prerequisite of rasterize-geo so the CI guardrail diff is meaningful
 [group: 'dev']
 registry-gen:
     cargo run --manifest-path ../tools/geo_rasterizer/Cargo.toml --release --bin registry_gen
-    @echo "✅ geo_entity_registry.toml regenerated (union over WorldviewVariant::ALL)"
+    @echo "✅ geo_entity_registry.toml regenerated (union over Worldview::ALL)"
 
 [group: 'dev']
 rasterize-geo: registry-gen
