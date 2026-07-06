@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 
 use flutter_rust_bridge::frb;
-use geo_data_format::Worldview;
+use geo_data_format::Worldview as GeoWorldview;
 
 pub use crate::achievement::layer::AchievementLayer;
 use crate::achievement::read_model::region;
@@ -18,38 +18,66 @@ pub use geo_data_format::GeoEntityId;
 #[frb(mirror(GeoEntityId))]
 pub struct _GeoEntityId(pub u32);
 
-#[frb(mirror(Worldview))]
-pub enum _Worldview {
+// TODO: Keep this as a Dart-facing wrapper instead of `#[frb(mirror(GeoWorldview))]`.
+// FRB mirror types can expose methods already implemented on the original type
+// via `#[frb(external)]`, but cannot add bridge-local methods to the mirror.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Worldview {
     Iso,
     Chn,
     Usa,
 }
 
-// TODO: change these to a method instead of a function.
-#[frb(sync)]
-pub fn worldview_asset_path(worldview: &Worldview) -> String {
-    format!("assets/geo/geo_data_{}.bin", worldview.spec().id)
+impl Worldview {
+    #[frb(sync, getter)]
+    pub fn asset_path(&self) -> String {
+        format!("assets/geo/geo_data_{}.bin", self.inner().spec().id)
+    }
+
+    #[frb(sync)]
+    pub fn from_id(id: &str) -> Option<Self> {
+        GeoWorldview::from_id(id).ok().map(Self::from)
+    }
+
+    #[frb(sync, getter)]
+    pub fn id(&self) -> String {
+        self.inner().spec().id.to_owned()
+    }
+
+    #[frb(sync)]
+    pub fn default_value() -> Self {
+        Self::from(GeoWorldview::ALL[0])
+    }
+
+    fn inner(self) -> GeoWorldview {
+        match self {
+            Self::Iso => GeoWorldview::Iso,
+            Self::Chn => GeoWorldview::Chn,
+            Self::Usa => GeoWorldview::Usa,
+        }
+    }
 }
 
-#[frb(sync)]
-pub fn worldview_of_string_opt(str: &str) -> Option<Worldview> {
-    Worldview::from_id(str).ok()
+impl From<GeoWorldview> for Worldview {
+    fn from(worldview: GeoWorldview) -> Self {
+        match worldview {
+            GeoWorldview::Iso => Self::Iso,
+            GeoWorldview::Chn => Self::Chn,
+            GeoWorldview::Usa => Self::Usa,
+        }
+    }
 }
 
-#[frb(sync)]
-pub fn worldview_to_string(worldview: &Worldview) -> &'static str {
-    worldview.spec().id
-}
-
-#[frb(sync)]
-pub fn default_worldview() -> Worldview {
-    Worldview::ALL[0]
+impl From<Worldview> for GeoWorldview {
+    fn from(worldview: Worldview) -> Self {
+        worldview.inner()
+    }
 }
 
 pub fn init_or_change_geo_data(worldview: Worldview, geo_data: &[u8]) -> Result<()> {
     crate::api::api::get()
         .storage
-        .init_or_change_geo_data(worldview, geo_data)
+        .init_or_change_geo_data(worldview.into(), geo_data)
 }
 
 /// Explored area for a single layer.
