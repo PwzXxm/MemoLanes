@@ -143,7 +143,7 @@ class AppBootstrap {
       systemCacheDir: (await cacheDirFuture).path,
     );
 
-    // TODO: right now we make sure the default geo data is fully loaded during
+    // TODO: right now we make sure the geo data is fully loaded during
     // app initialization, which can be a bit expensive. We should consider
     // delaying this.
     await _initOrChangeGeoData(achievement.defaultWorldview());
