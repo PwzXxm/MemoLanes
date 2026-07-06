@@ -46,11 +46,7 @@ impl Worldview {
     // (or: add the variant with a placeholder sha, run `--worldview <new>
     //  --ensure-source --download-only`, and copy the real hash from the
     //  verify-mismatch error.)
-    pub const ALL: &'static [Worldview] = &[
-        Worldview::Iso,
-        Worldview::Chn,
-        Worldview::Usa,
-    ];
+    pub const ALL: &'static [Worldview] = &[Worldview::Iso, Worldview::Chn, Worldview::Usa];
 
     pub const fn spec(self) -> WorldviewSpec {
         match self {
@@ -135,10 +131,7 @@ mod tests {
             Worldview::Iso.spec().source_sha256,
             "60eb10aa951f5872507c9436937508b09be4b43dc9fa7aad7644f23ef12e1cad"
         );
-        assert_eq!(
-            Worldview::from_id("chn").unwrap(),
-            Worldview::Chn
-        );
+        assert_eq!(Worldview::from_id("chn").unwrap(), Worldview::Chn);
         assert!(Worldview::from_id("bogus").is_err());
     }
 
