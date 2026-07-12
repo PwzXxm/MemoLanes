@@ -1,15 +1,145 @@
 use std::path::Path;
 
-use geo_data_format::GeoEntityKind;
+use geo_data_format::{GeoEntityId, GeoEntityKind};
 use geo_rasterizer::entities::{assemble_entities, EntityModel};
-use geo_rasterizer::parse::parse_geojson;
-use geo_rasterizer::registry::Registry;
+use geo_rasterizer::parse::{parse_geojson, ParsedFeature};
+use geo_rasterizer::registry::{Entry, Registry};
+use geo_types::{Coord, LineString, MultiPolygon, Polygon};
 
 const SYNTHETIC_REGISTRY: &str = "tests/fixtures/synthetic_registry.toml";
 
+/// A minimal `TYPE == "Country"` feature: one unit-square polygon, `iso_a3_eh`
+/// equal to its `adm0_a3`. `region_un` is a harmless placeholder (unused unless
+/// `continent` is the "Seven seas" bucket).
+fn feat(adm0: &str, continent: &str) -> ParsedFeature {
+    let sq = Polygon::new(
+        LineString(vec![
+            Coord { x: 0.0, y: 0.0 },
+            Coord { x: 1.0, y: 0.0 },
+            Coord { x: 1.0, y: 1.0 },
+            Coord { x: 0.0, y: 0.0 },
+        ]),
+        vec![],
+    );
+    ParsedFeature {
+        adm0_a3: adm0.into(),
+        iso_a3: adm0.into(),
+        iso_a3_eh: adm0.into(),
+        name: adm0.into(),
+        feature_type: "Country".into(),
+        continent: continent.into(),
+        region_un: "Africa".into(),
+        geometry: MultiPolygon(vec![sq]),
+    }
+}
+
+/// Tiny registry: continent `AS` = 5, country `AAA` = 3.
+fn reg() -> Registry {
+    Registry {
+        schema: 1,
+        continents: vec![Entry {
+            code: "AS".into(),
+            id: 5,
+            refs: Default::default(),
+        }],
+        countries: vec![Entry {
+            code: "AAA".into(),
+            id: 3,
+            refs: Default::default(),
+        }],
+    }
+}
+
+#[test]
+fn ids_come_from_registry_not_position() {
+    let m = assemble_entities(&[feat("AAA", "Asia")], &reg()).unwrap();
+    let aaa = m
+        .entities
+        .iter()
+        .find(|e| e.canonical_code == "AAA")
+        .unwrap();
+    assert_eq!(aaa.id, GeoEntityId(3));
+    assert_eq!(aaa.parent_id, Some(GeoEntityId(5)));
+}
+
+/// End-to-end for the chn worldview: parsing the chn source folds Hong Kong and
+/// Macau into China — one CHN entity (no HKG/MAC), its geometry carries all three
+/// parts, and its ISO code is the sovereign's (CHN). Taiwan is already merged in
+/// NE's chn source, so this covers the whole "HK/Macau/Taiwan → China" grouping
+/// the app requires. Drives `parse_geojson` (which applies the absorptions) so it
+/// exercises the real, un-forgettable path.
+#[test]
+fn chn_worldview_merges_hong_kong_macau_and_taiwan_into_china() {
+    use serde_json::json;
+    // A chn-style source: China plus the two still-distinct dependencies, each a
+    // separate square (NE's chn source has no separate Taiwan feature).
+    let feature = |adm0: &str, x0: f64| {
+        json!({
+            "type": "Feature",
+            "properties": {"ADM0_A3":adm0,"ISO_A3":adm0,"ISO_A3_EH":adm0,"NAME":adm0,"CONTINENT":"Asia","REGION_UN":"Asia","TYPE":"Country"},
+            "geometry": {"type":"Polygon","coordinates":[[[x0,0.0],[x0+1.0,0.0],[x0+1.0,1.0],[x0,0.0]]]}
+        })
+    };
+    let raw = json!({
+        "type": "FeatureCollection",
+        "features": [feature("CHN", 0.0), feature("HKG", 10.0), feature("MAC", 20.0)],
+    });
+    let tmp = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(tmp.path(), serde_json::to_string(&raw).unwrap()).unwrap();
+    let features = parse_geojson(tmp.path(), "chn").unwrap();
+
+    let reg = Registry {
+        schema: 1,
+        continents: vec![Entry {
+            code: "AS".into(),
+            id: 0,
+            refs: Default::default(),
+        }],
+        countries: vec![Entry {
+            code: "CHN".into(),
+            id: 18,
+            refs: Default::default(),
+        }],
+    };
+    let m = assemble_entities(&features, &reg).unwrap();
+
+    let countries: Vec<&str> = m
+        .entities
+        .iter()
+        .filter(|e| matches!(e.kind, GeoEntityKind::Country))
+        .map(|e| e.canonical_code.as_str())
+        .collect();
+    assert_eq!(
+        countries,
+        vec!["CHN"],
+        "HKG/MAC must not survive as entities"
+    );
+
+    let china = m
+        .entities
+        .iter()
+        .find(|e| e.canonical_code == "CHN")
+        .unwrap();
+    assert_eq!(china.iso_a3_eh.as_deref(), Some("CHN"));
+    assert_eq!(china.parent_id, Some(GeoEntityId(0)));
+
+    // All three source polygons are merged under CHN; no HKG/MAC geometry.
+    assert_eq!(m.geometry_for_country["CHN"].0.len(), 3);
+    assert!(!m.geometry_for_country.contains_key("HKG"));
+    assert!(!m.geometry_for_country.contains_key("MAC"));
+}
+
+#[test]
+fn unknown_adm0_is_an_error() {
+    let err = assemble_entities(&[feat("ZZZ", "Asia")], &reg())
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("ZZZ"), "got: {err}");
+}
+
 #[test]
 fn assemble_groups_continents_and_countries() {
-    let features = parse_geojson(Path::new("tests/fixtures/synthetic.geojson")).unwrap();
+    let features = parse_geojson(Path::new("tests/fixtures/synthetic.geojson"), "iso").unwrap();
     let registry = Registry::load(Path::new(SYNTHETIC_REGISTRY)).unwrap();
     let model: EntityModel = assemble_entities(&features, &registry).unwrap();
 
@@ -32,7 +162,6 @@ fn assemble_groups_continents_and_countries() {
 
 #[test]
 fn assemble_collapses_duplicate_adm0_a3() {
-    use geo_rasterizer::registry::Entry;
     use serde_json::json;
     let raw = json!({
         "type": "FeatureCollection",
@@ -51,7 +180,7 @@ fn assemble_collapses_duplicate_adm0_a3() {
     });
     let tmp = tempfile::NamedTempFile::new().unwrap();
     std::fs::write(tmp.path(), serde_json::to_string(&raw).unwrap()).unwrap();
-    let features = parse_geojson(tmp.path()).unwrap();
+    let features = parse_geojson(tmp.path(), "iso").unwrap();
     // Build an inline registry: EU=0, SA=1, FRA=2.
     let registry = Registry {
         schema: 1,
@@ -100,7 +229,6 @@ fn assemble_collapses_duplicate_adm0_a3() {
 /// "Country" (e.g. Palestine PSX → PSE, TYPE "Indeterminate").
 #[test]
 fn single_feature_uses_own_iso_a3_eh_even_when_adm0_differs() {
-    use geo_rasterizer::registry::Entry;
     use serde_json::json;
     let raw = json!({
         "type": "FeatureCollection",
@@ -112,7 +240,7 @@ fn single_feature_uses_own_iso_a3_eh_even_when_adm0_differs() {
     });
     let tmp = tempfile::NamedTempFile::new().unwrap();
     std::fs::write(tmp.path(), serde_json::to_string(&raw).unwrap()).unwrap();
-    let features = parse_geojson(tmp.path()).unwrap();
+    let features = parse_geojson(tmp.path(), "iso").unwrap();
     let registry = Registry {
         schema: 1,
         continents: vec![Entry {
@@ -139,7 +267,6 @@ fn single_feature_uses_own_iso_a3_eh_even_when_adm0_differs() {
 /// (the NE `IOA` bucket = Cocos + Christmas, two distinct ISO territories).
 #[test]
 fn collapsed_group_without_sovereign_member_is_none() {
-    use geo_rasterizer::registry::Entry;
     use serde_json::json;
     let raw = json!({
         "type": "FeatureCollection",
@@ -158,7 +285,7 @@ fn collapsed_group_without_sovereign_member_is_none() {
     });
     let tmp = tempfile::NamedTempFile::new().unwrap();
     std::fs::write(tmp.path(), serde_json::to_string(&raw).unwrap()).unwrap();
-    let features = parse_geojson(tmp.path()).unwrap();
+    let features = parse_geojson(tmp.path(), "iso").unwrap();
     let registry = Registry {
         schema: 1,
         continents: vec![Entry {
@@ -183,7 +310,7 @@ fn collapsed_group_without_sovereign_member_is_none() {
 
 #[test]
 fn entity_ids_are_dense_and_continents_first() {
-    let features = parse_geojson(Path::new("tests/fixtures/synthetic.geojson")).unwrap();
+    let features = parse_geojson(Path::new("tests/fixtures/synthetic.geojson"), "iso").unwrap();
     let registry = Registry::load(Path::new(SYNTHETIC_REGISTRY)).unwrap();
     let model = assemble_entities(&features, &registry).unwrap();
     // Continents at IDs 0..continent_count; countries follow (registry assigns 0-2 to
@@ -210,7 +337,7 @@ fn entity_ids_are_dense_and_continents_first() {
 
 #[test]
 fn unused_lookup_value_is_referenced() {
-    let features = parse_geojson(Path::new("tests/fixtures/synthetic.geojson")).unwrap();
+    let features = parse_geojson(Path::new("tests/fixtures/synthetic.geojson"), "iso").unwrap();
     let registry = Registry::load(Path::new(SYNTHETIC_REGISTRY)).unwrap();
     let model = assemble_entities(&features, &registry).unwrap();
     let _value = model.entities[0].id;

@@ -30,10 +30,12 @@ pub struct ParsedFeature {
     pub geometry: MultiPolygon<f64>,
 }
 
-/// Parse a Natural Earth admin-0 countries GeoJSON. Returns every feature;
-/// "Seven seas (open ocean)" features are kept and parented via `REGION_UN`
-/// (see `entities::continent_code`).
-pub fn parse_geojson(path: &Path) -> Result<Vec<ParsedFeature>> {
+/// Parse a Natural Earth admin-0 countries GeoJSON for a given `worldview`, then
+/// apply that worldview's absorptions (`absorb::apply_absorptions`) so the caller
+/// can never hold un-absorbed features — the fold is not a separate step anyone
+/// can forget. "Seven seas (open ocean)" features are kept and parented via
+/// `REGION_UN` (see `entities::continent_code`).
+pub fn parse_geojson(path: &Path, worldview: &str) -> Result<Vec<ParsedFeature>> {
     let raw = std::fs::read_to_string(path)
         .with_context(|| format!("reading geojson at {}", path.display()))?;
     let collection: geojson::FeatureCollection = serde_json::from_str(&raw)
@@ -102,6 +104,7 @@ pub fn parse_geojson(path: &Path) -> Result<Vec<ParsedFeature>> {
             geometry: mp,
         });
     }
+    crate::absorb::apply_absorptions(&mut out, worldview)?;
     Ok(out)
 }
 
