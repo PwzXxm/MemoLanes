@@ -50,6 +50,7 @@ impl RegionKind {
 pub struct RegionEntity {
     pub kind: RegionKind,
     pub name_key: String,
+    pub iso_a3_eh: Option<String>,
     pub visited_area_m2: u64,
     pub total_area_m2: u64,
 }
@@ -104,6 +105,7 @@ fn region_entity(
     Some(RegionEntity {
         kind: entity.kind.into(),
         name_key: entity.name_key.clone(),
+        iso_a3_eh: entity.iso_a3_eh.clone(),
         visited_area_m2,
         total_area_m2: entity.total_area_m2,
     })
@@ -152,6 +154,7 @@ pub fn region_level_view(
             RegionEntity {
                 kind: entity.kind.into(),
                 name_key: entity.name_key.clone(),
+                iso_a3_eh: entity.iso_a3_eh.clone(),
                 visited_area_m2,
                 total_area_m2: entity.total_area_m2,
             },
