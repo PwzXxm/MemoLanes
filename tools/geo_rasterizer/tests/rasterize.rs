@@ -35,7 +35,7 @@ fn synthetic_polygons_classify_correctly() {
             let entity_id = model
                 .entities
                 .iter()
-                .find(|e| e.iso_code == "AAA")
+                .find(|e| e.canonical_code == "AAA")
                 .unwrap()
                 .id;
             assert_eq!(blocks[block_idx], Some(entity_id));

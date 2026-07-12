@@ -56,7 +56,7 @@ fn register_source(reg: &mut Registry, worldview: Worldview, path: &Path) -> Res
     let mut items: Vec<(String, bool, geo_types::MultiPolygon<f64>)> = Vec::new();
     for f in &features {
         items.push((
-            continent_code_pub(&f.continent).to_string(),
+            continent_code_pub(&f.continent, &f.region_un).to_string(),
             true,
             f.geometry.clone(),
         ));

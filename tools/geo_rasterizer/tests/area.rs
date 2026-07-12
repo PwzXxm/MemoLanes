@@ -23,7 +23,7 @@ fn synthetic_areas_are_positive_and_sum_consistently() {
             assert!(
                 e.total_area_m2 > 0,
                 "{} should have nonzero area",
-                e.iso_code
+                e.canonical_code
             );
         }
     }
@@ -42,7 +42,7 @@ fn synthetic_areas_are_positive_and_sum_consistently() {
         assert_eq!(
             cont.total_area_m2, sum,
             "continent {} area mismatch",
-            cont.iso_code
+            cont.canonical_code
         );
     }
 }
@@ -62,7 +62,8 @@ fn border_cell_area_weighted_by_latitude_row() {
         entities: vec![GeoEntity {
             id,
             kind: GeoEntityKind::Country,
-            iso_code: "AAA".into(),
+            canonical_code: "AAA".into(),
+            iso_a3_eh: None,
             name_key: "k.AAA".into(),
             parent_id: None,
             total_area_m2: 0,
