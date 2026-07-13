@@ -59,6 +59,52 @@ fn iso_asset_resolves_known_country_locations() {
     }
 }
 
+/// chn worldview groups Hong Kong, Macau, and Taiwan into China: a lookup at
+/// each resolves to `CHN`, and none survives as its own country entity.
+#[test]
+fn chn_asset_groups_hong_kong_macau_taiwan_into_china() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../assets/geo/geo_data_chn.bin");
+    if !path.exists() {
+        eprintln!(
+            "skipping: {} absent — run `just rasterize-geo` to generate it",
+            path.display()
+        );
+        return;
+    }
+    let geo = GeoIndex::from_bytes(&std::fs::read(&path).unwrap()).unwrap();
+
+    // Land points well inside each territory — all must resolve to China.
+    for (lng, lat, place) in [
+        (114.1694, 22.3193, "Hong Kong"),
+        (113.5439, 22.1987, "Macau"),
+        (121.0, 23.75, "Taiwan"),
+    ] {
+        let (tile, block) = block_of(lng, lat);
+        let id = geo
+            .entity_of_block(tile, block)
+            .unwrap_or_else(|| panic!("{place}: resolved to ocean at ({lng}, {lat})"));
+        assert_eq!(
+            geo.entity(id).unwrap().canonical_code,
+            "CHN",
+            "{place} at ({lng}, {lat}) must belong to China in chn worldview"
+        );
+    }
+
+    // The absorbed dependencies must not exist as separate country entities.
+    let codes: std::collections::HashSet<&str> = geo
+        .entities_of_kind(GeoEntityKind::Country)
+        .iter()
+        .filter_map(|id| geo.entity(*id).map(|e| e.canonical_code.as_str()))
+        .collect();
+    assert!(codes.contains("CHN"), "China missing from chn asset");
+    for absorbed in ["HKG", "MAC", "TWN"] {
+        assert!(
+            !codes.contains(absorbed),
+            "{absorbed} must be absorbed into China in chn worldview"
+        );
+    }
+}
+
 /// Former "Seven seas (open ocean)" features are now first-class country
 /// entities, parented via `REGION_UN`, and carry a real `iso_a3_eh`. Checks the
 /// entity set directly (not a geographic lookup) so it is robust to how tiny

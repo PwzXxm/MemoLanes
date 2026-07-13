@@ -11,7 +11,7 @@ use geo_rasterizer::registry::Registry;
 
 #[test]
 fn synthetic_areas_are_positive_and_sum_consistently() {
-    let features = parse_geojson(Path::new("tests/fixtures/synthetic.geojson")).unwrap();
+    let features = parse_geojson(Path::new("tests/fixtures/synthetic.geojson"), "iso").unwrap();
     let registry = Registry::load(Path::new("tests/fixtures/synthetic_registry.toml")).unwrap();
     let mut model = assemble_entities(&features, &registry).unwrap();
     let (tile_lookup, block_lookup) = rasterize(&features, &model);

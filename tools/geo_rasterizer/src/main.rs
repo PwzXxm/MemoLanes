@@ -150,7 +150,7 @@ fn rasterize_one(
 
     // 2. Parse + validate.
     eprintln!("[geo_rasterizer] parsing inputs...");
-    let features = parse_geojson(&countries)?;
+    let features = parse_geojson(&countries, worldview_id)?;
     eprintln!("[geo_rasterizer] parsed {} features", features.len());
     validate_no_antimeridian_span(&features)?;
     let registry = Registry::load(&registry_path)?;

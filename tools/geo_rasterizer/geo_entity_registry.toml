@@ -311,7 +311,7 @@ code = "CHN"
 id = 18
 
 [country.refs]
-chn = [103.8162, 36.4588]
+chn = [103.8172, 36.4574]
 iso = [103.9277, 36.5645]
 usa = [103.827, 36.5584]
 
@@ -605,6 +605,7 @@ usa = [-58.9801, 4.7935]
 code = "HKG"
 id = 166
 ref = [114.1314, 22.3846]
+worldview = ["iso", "usa"]
 
 [[country]]
 code = "HMD"
@@ -835,6 +836,7 @@ ref = [24.9086, 56.8518]
 code = "MAC"
 id = 237
 ref = [113.5502, 22.1578]
+worldview = ["iso", "usa"]
 
 [[country]]
 code = "MAF"
